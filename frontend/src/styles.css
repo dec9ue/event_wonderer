@@ -1,0 +1,4 @@
+html, body, #root { height: 100%; margin: 0; }
+* { box-sizing: border-box; }
+label { display: grid; gap: 4px; }
+input, select, textarea, button { padding: 6px 8px; font-size: 14px; }

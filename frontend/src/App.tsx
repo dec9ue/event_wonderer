@@ -1,10 +1,7 @@
 import React from 'react'
+import { RouterProvider } from 'react-router-dom'
+import { router } from './router'
 
 export default function App() {
-  return (
-    <div style={{ padding: 24 }}>
-      <h1>Site Patrol & Findings Map</h1>
-      <p>Frontend placeholder is up. Backend health at /healthz.</p>
-    </div>
-  )
+  return <RouterProvider router={router} />
 }

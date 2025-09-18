@@ -30,19 +30,29 @@ Multi-user MVP for factory site patrol and findings, with Fastify + Prisma + Pos
    Services:
    - Postgres: localhost:5432
    - MinIO API: http://localhost:9000 (console http://localhost:9001)
-   - Backend: http://localhost:3000/healthz
-   - Frontend: http://localhost:5173
+   - Backend: http://localhost:3000 (health: /healthz, docs: /docs)
+   - App (SPA): http://localhost:5173 (login at /login)
 
-4. Migrate and seed database
+4. Initialize database schema and seed
 
    Run these in the backend container:
 
-   docker compose exec backend npx prisma migrate deploy
+   # If this is the first run or there are no migrations yet
+   docker compose exec backend npx prisma db push
+   # Then seed initial data
    docker compose exec backend npx prisma db seed
+
+   If you maintain Prisma migrations in the repo, you can replace the db push with:
+
+   docker compose exec backend npx prisma migrate deploy
 
    Seed creates:
    - Admin: admin@example.com / Admin123!
    - Sample floor and reports
+
+5. Create MinIO bucket (one-time)
+
+   Open the MinIO console at http://localhost:9001 and create a bucket named `attachments` (the default expected by the backend). You can change the bucket via `MINIO_BUCKET` in `.env` and `docker-compose.yml`.
 
 ## Development
 
@@ -68,5 +78,97 @@ Referential actions:
 
 ## Notes
 - MinIO bucket: attachments (create manually in console or via future init script)
-- JWT and auth routes are not implemented yet; this is infra + data model base.
-- Frontend is a placeholder; future work will add map UI and auth flows.
+- Auth, users, floors, reports, tags, attachments APIs are implemented with JWT cookie auth. Swagger available at /docs.
+- Frontend includes a login screen, a map viewer with draggable report markers, and admin pages for floors and tags.
+
+Routing (SPA): The frontend is served via Nginx with a fallback to `index.html`, so deep links like `/login`, `/map`, etc. won’t 404.
+
+## Further reading
+
+- docs/ARCHITECTURE.md — High-level architecture
+- docs/SEQUENCES.md — Key flows (login, uploads, audit)
+- docs/DEPLOYMENT.md — Bring-up, configuration, and troubleshooting
+- docs/USER_GUIDE.md — End-user guide (screens and common tasks)
+
+### Environment variables
+
+Key backend env vars (see .env.sample):
+- PORT: Backend port (default 3000)
+- DATABASE_URL: Postgres connection string
+- JWT_SECRET: Secret for signing JWTs
+- FRONTEND_ORIGIN: Allowed CORS origin for the SPA
+- COOKIE_NAME, COOKIE_SECURE, COOKIE_SAME_SITE: Cookie settings for the JWT
+- MINIO_ENDPOINT, MINIO_PORT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_USE_SSL: MinIO config
+- PRESIGNED_TTL_SEC: Default TTL for S3 presigned URLs
+- MAX_ATTACHMENT_BYTES: Max allowed upload size (bytes)
+- RATE_LIMIT_MAX, RATE_LIMIT_WINDOW: Global rate-limit settings
+
+## Floors & Image Uploads
+
+Image storage uses MinIO (S3-compatible) with presigned PUT uploads from the browser.
+
+Flow:
+1) Admin creates a Floor via POST /api/floors { name }
+2) Admin calls POST /api/floors/:id/image/init-upload with body { contentType: 'image/png'|'image/jpeg' }
+3) Backend returns a presigned URL; the browser PUTs the binary file there directly.
+4) Backend returns objectKey as an s3:// URI (e.g., s3://attachments/floors/<uuid>.img). Store this value into Floor.imageUrl via PATCH /api/floors/:id along with widthPx/heightPx parsed client-side.
+
+Environment (.env) settings impacting MinIO:
+
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minio
+MINIO_SECRET_KEY=minio123
+MINIO_BUCKET=attachments
+MINIO_USE_SSL=false
+
+Frontend can set VITE_API_BASE to point to backend (e.g., http://localhost:3000). The Admin “Floor Manager” page lives at /admin/floors and supports listing, creating floors, and uploading images.
+
+## Auth & Users
+
+Endpoints:
+- POST /api/auth/login { email, password } → sets httpOnly JWT cookie, returns {id,name,email,role}
+- POST /api/auth/logout → clears cookie
+- GET /api/auth/me → returns current user
+
+Admin-only user management:
+- GET /api/users?page=1&pageSize=20
+- POST /api/users { name, email, role, password }
+- PATCH /api/users/:id { name?, role?, password? }
+- DELETE /api/users/:id
+
+Security:
+- JWT in httpOnly cookie (same-site=Lax by default)
+- CORS limited to FRONTEND_ORIGIN
+- Login rate-limited (5/min/IP)
+
+Docs:
+- OpenAPI/Swagger at /docs
+
+## Reports, Tags, Attachments
+
+Reports (auth required):
+- GET /api/reports — list with filters: floorId, q (search title/body), status, from, to, tag, page, pageSize
+- GET /api/reports/:id — fetch one
+- POST /api/reports — create; body includes title, body, status, observedAt, x, y, lat?, lng?, floorId, tags?
+- PATCH /api/reports/:id — update; same fields optional; tags array replaces associations when provided
+- DELETE /api/reports/:id — delete
+- Ownership: creators can modify/delete their own reports; admins can modify/delete any
+- Audit: create/update/delete entries are recorded in AuditLog with field diffs
+
+Tags (admin only):
+- GET /api/tags — list all
+- POST /api/tags — create { name }
+- PATCH /api/tags/:id — rename { name }
+- DELETE /api/tags/:id — delete
+
+Attachments (auth required; must be report owner or admin):
+- POST /api/reports/:id/attachments/init-upload — returns presigned PUT and s3:// objectKey for client upload
+- POST /api/reports/:id/attachments/complete — persist attachment row after successful upload
+- GET /api/attachments/:id/presigned-get — returns presigned GET URL to download
+- DELETE /api/attachments/:id — delete attachment row
+
+Notes
+- S3 keys are stored as s3://<bucket>/<key>; server presigns GET/PUT on demand via MinIO.
+- Content-type allowlist is enforced for attachments; max size configurable via MAX_ATTACHMENT_BYTES.
+- Swagger docs currently cover core routes; reports/tags/attachments docs can be extended further.

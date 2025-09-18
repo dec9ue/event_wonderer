@@ -83,6 +83,12 @@ Referential actions:
 
 Routing (SPA): The frontend is served via Nginx with a fallback to `index.html`, so deep links like `/login`, `/map`, etc. won’t 404.
 
+## Further reading
+
+- docs/ARCHITECTURE.md — High-level architecture
+- docs/SEQUENCES.md — Key flows (login, uploads, audit)
+- docs/DEPLOYMENT.md — Bring-up, configuration, and troubleshooting
+
 ### Environment variables
 
 Key backend env vars (see .env.sample):

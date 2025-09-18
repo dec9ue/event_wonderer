@@ -1,0 +1,147 @@
+// Prisma schema for site patrol & findings map MVP
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  user
+}
+
+enum ReportStatus {
+  open
+  in_progress
+  closed
+}
+
+enum GeomType {
+  point
+}
+
+enum AttachmentType {
+  video
+  audio
+  image
+  file
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          Role     @default(user)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  // Relations
+  createdReports Report[] @relation("CreatedReports")
+  updatedReports Report[] @relation("UpdatedReports")
+  auditLogs      AuditLog[]
+}
+
+model Floor {
+  id          String   @id @default(cuid())
+  name        String
+  imageUrl    String
+  widthPx     Int
+  heightPx    Int
+  transformJson Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Relations
+  reports     Report[]
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  title       String
+  body        String
+  status      ReportStatus  @default(open)
+  observedAt  DateTime
+  geomType    GeomType
+  x           Float
+  y           Float
+  lat         Float?
+  lng         Float?
+  floorId     String
+  createdById String
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  floor     Floor   @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CreatedReports", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  updatedBy User    @relation("UpdatedReports", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  attachments Attachment[]
+  tags         ReportTag[]
+  auditLogs    AuditLog[]
+
+  @@index([floorId])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([status])
+  @@index([observedAt])
+}
+
+model Attachment {
+  id           String          @id @default(cuid())
+  reportId     String
+  type         AttachmentType
+  objectKey    String
+  contentType  String
+  bytes        Int
+  durationSec  Float?
+  thumbnailKey String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  reports ReportTag[]
+}
+
+model ReportTag {
+  reportId String
+  tagId    String
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, tagId])
+  @@index([tagId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  reportId  String
+  actorId   String
+  action    AuditAction
+  diffJson  Json
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  actor  User   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([reportId])
+  @@index([actorId])
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+}

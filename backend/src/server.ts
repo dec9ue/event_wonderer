@@ -1,41 +1,50 @@
-import Fastify from 'fastify'
-import cookie from '@fastify/cookie'
+import Fastify, { FastifyError, FastifyReply, FastifyRequest } from 'fastify'
 import cors from '@fastify/cors'
-import { env } from './env'
+import cookie from '@fastify/cookie'
 import { config } from './config'
-import { PrismaClient } from '@prisma/client'
-import { S3Client } from '@aws-sdk/client-s3'
+import { prismaPlugin } from './plugins/prisma'
+import { authPlugin } from './plugins/auth'
+import { swaggerPlugin } from './plugins/swagger'
+import authRoutes from './routes/auth'
+import userRoutes from './routes/users'
 
-const app = Fastify({ logger: true })
+export const buildServer = () => {
+  const app = Fastify({ logger: true })
 
-await app.register(cors, { origin: true, credentials: true })
-await app.register(cookie, { hook: 'onRequest' })
+  // Global error handler
+  app.setErrorHandler((err: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
+    const status = (err as any).statusCode ?? 500
+    const code = (err as any).code ?? 'INTERNAL_ERROR'
+    const message = err.message || 'Unexpected error'
+    const details = (err as any).validation || (err as any).details
+    reply.status(status).send({ error: { code, message, details } })
+  })
 
-// Initialize clients
-const prisma = new PrismaClient()
-const s3 = new S3Client({
-  region: 'us-east-1',
-  endpoint: `${config.s3.tls ? 'https' : 'http'}://${config.s3.endpoint}:${config.s3.port}`,
-  forcePathStyle: true,
-  credentials: {
-    accessKeyId: config.s3.accessKeyId,
-    secretAccessKey: config.s3.secretAccessKey,
-  },
-})
+  // Core plugins
+  app.register(cors, {
+    origin: config.corsOrigin,
+    credentials: true,
+  })
+  app.register(cookie)
+  app.register(swaggerPlugin)
+  app.register(prismaPlugin)
+  app.register(authPlugin)
 
-app.get('/healthz', async () => {
-  // Tiny DB ping
-  await prisma.$queryRaw`SELECT 1`;
-  return { ok: true }
-})
+  // Routes
+  app.get('/healthz', async (req) => {
+    await req.server.prisma.$queryRaw`SELECT 1`;
+    return { ok: true }
+  })
+  app.register(authRoutes, { prefix: '/api/auth' })
+  app.register(userRoutes, { prefix: '/api/users' })
 
-const start = async () => {
-  try {
-    await app.listen({ port: env.PORT, host: '0.0.0.0' })
-  } catch (err) {
-    app.log.error(err)
-    process.exit(1)
-  }
+  return app
 }
 
-start()
+if (import.meta.env?.MODE !== 'test') {
+  const app = buildServer()
+  app.listen({ port: config.port, host: '0.0.0.0' }).catch((err) => {
+    app.log.error(err)
+    process.exit(1)
+  })
+}

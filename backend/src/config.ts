@@ -3,7 +3,17 @@ import { env } from './env'
 export const config = {
   env: env.NODE_ENV,
   port: env.PORT,
-  jwtSecret: env.JWT_SECRET,
+  corsOrigin: env.FRONTEND_ORIGIN,
+  jwt: {
+    secret: env.JWT_SECRET,
+    cookieName: env.COOKIE_NAME,
+    cookie: {
+      secure: env.COOKIE_SECURE,
+      sameSite: env.COOKIE_SAME_SITE,
+      httpOnly: true,
+      path: '/',
+    } as const,
+  },
   db: {
     url: env.DATABASE_URL,
   },

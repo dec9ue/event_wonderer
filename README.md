@@ -70,3 +70,24 @@ Referential actions:
 - MinIO bucket: attachments (create manually in console or via future init script)
 - JWT and auth routes are not implemented yet; this is infra + data model base.
 - Frontend is a placeholder; future work will add map UI and auth flows.
+
+## Auth & Users
+
+Endpoints:
+- POST /api/auth/login { email, password } → sets httpOnly JWT cookie, returns {id,name,email,role}
+- POST /api/auth/logout → clears cookie
+- GET /api/auth/me → returns current user
+
+Admin-only user management:
+- GET /api/users?page=1&pageSize=20
+- POST /api/users { name, email, role, password }
+- PATCH /api/users/:id { name?, role?, password? }
+- DELETE /api/users/:id
+
+Security:
+- JWT in httpOnly cookie (same-site=Lax by default)
+- CORS limited to FRONTEND_ORIGIN
+- Login rate-limited (5/min/IP)
+
+Docs:
+- OpenAPI/Swagger at /docs

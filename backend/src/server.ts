@@ -8,6 +8,9 @@ import { swaggerPlugin } from './plugins/swagger'
 import authRoutes from './routes/auth'
 import userRoutes from './routes/users'
 import floorsRoutes from './routes/floors'
+import reportsRoutes from './routes/reports'
+import tagsRoutes from './routes/tags'
+import attachmentsRoutes from './routes/attachments'
 import { s3Plugin } from './plugins/s3'
 
 export const buildServer = () => {
@@ -34,20 +37,23 @@ export const buildServer = () => {
   app.register(s3Plugin)
 
   // Routes
-  app.get('/healthz', async (req) => {
+  app.get('/healthz', async (req: FastifyRequest) => {
     await req.server.prisma.$queryRaw`SELECT 1`;
     return { ok: true }
   })
   app.register(authRoutes, { prefix: '/api/auth' })
   app.register(userRoutes, { prefix: '/api/users' })
   app.register(floorsRoutes, { prefix: '/api/floors' })
+  app.register(reportsRoutes, { prefix: '/api/reports' })
+  app.register(tagsRoutes, { prefix: '/api/tags' })
+  app.register(attachmentsRoutes, { prefix: '/api' })
 
   return app
 }
 
-if (import.meta.env?.MODE !== 'test') {
+if (process.env.NODE_ENV !== 'test') {
   const app = buildServer()
-  app.listen({ port: config.port, host: '0.0.0.0' }).catch((err) => {
+  app.listen({ port: config.port, host: '0.0.0.0' }).catch((err: unknown) => {
     app.log.error(err)
     process.exit(1)
   })

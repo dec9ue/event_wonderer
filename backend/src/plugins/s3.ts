@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { config } from '../config'
 
@@ -7,6 +7,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     s3: S3Client
     presignPutObject: (params: { bucket: string; key: string; contentType: string; expiresInSec?: number }) => Promise<{ url: string; headers: Record<string, string> }>
+    presignGetObject: (params: { bucket: string; key: string; expiresInSec?: number }) => Promise<{ url: string }>
   }
 }
 
@@ -27,5 +28,11 @@ export const s3Plugin = fp(async (app) => {
     const command = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType })
     const url = await getSignedUrl(s3, command, { expiresIn: expiresInSec })
     return { url, headers: { 'Content-Type': contentType } }
+  })
+
+  app.decorate('presignGetObject', async ({ bucket, key, expiresInSec = 60 }) => {
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+    const url = await getSignedUrl(s3, command, { expiresIn: expiresInSec })
+    return { url }
   })
 })

@@ -1,4 +1,4 @@
-import { api } from './client'
+import api from './client'
 
 export type Me = { id: string; name: string; email: string; role: 'admin' | 'user' }
 

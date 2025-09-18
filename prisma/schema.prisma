@@ -49,9 +49,9 @@ model User {
 model Floor {
   id          String   @id @default(cuid())
   name        String
-  imageUrl    String
-  widthPx     Int
-  heightPx    Int
+  imageUrl    String?
+  widthPx     Int?
+  heightPx    Int?
   transformJson Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

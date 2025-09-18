@@ -68,8 +68,21 @@ Referential actions:
 
 ## Notes
 - MinIO bucket: attachments (create manually in console or via future init script)
-- JWT and auth routes are not implemented yet; this is infra + data model base.
-- Frontend is a placeholder; future work will add map UI and auth flows.
+- Auth, users, floors, reports, tags, attachments APIs are implemented with JWT cookie auth. Swagger available at /docs.
+- Frontend includes a login screen, a map viewer with draggable report markers, and admin pages for floors and tags.
+
+### Environment variables
+
+Key backend env vars (see .env.sample):
+- PORT: Backend port (default 3000)
+- DATABASE_URL: Postgres connection string
+- JWT_SECRET: Secret for signing JWTs
+- FRONTEND_ORIGIN: Allowed CORS origin for the SPA
+- COOKIE_NAME, COOKIE_SECURE, COOKIE_SAME_SITE: Cookie settings for the JWT
+- MINIO_ENDPOINT, MINIO_PORT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_USE_SSL: MinIO config
+- PRESIGNED_TTL_SEC: Default TTL for S3 presigned URLs
+- MAX_ATTACHMENT_BYTES: Max allowed upload size (bytes)
+- RATE_LIMIT_MAX, RATE_LIMIT_WINDOW: Global rate-limit settings
 
 ## Floors & Image Uploads
 
@@ -138,5 +151,5 @@ Attachments (auth required; must be report owner or admin):
 
 Notes
 - S3 keys are stored as s3://<bucket>/<key>; server presigns GET/PUT on demand via MinIO.
-- Content-type allowlist is enforced for attachments; max size 50MB by default.
-- Swagger docs currently cover auth/users/floors; reports/tags/attachments will be added with detailed schemas in a follow-up.
+- Content-type allowlist is enforced for attachments; max size configurable via MAX_ATTACHMENT_BYTES.
+- Swagger docs currently cover core routes; reports/tags/attachments docs can be extended further.

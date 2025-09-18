@@ -1,0 +1,20 @@
+export default {
+  common: {
+    signin: 'Sign in',
+    email: 'Email',
+    password: 'Password',
+    login: 'Login',
+    logout: 'Logout',
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    add: 'Add',
+    title: 'Title',
+    body: 'Body',
+    status: 'Status',
+    tags: 'Tags',
+    observedAt: 'Observed At',
+    keyword: 'Keyword',
+    dateRange: 'Date Range',
+  },
+}

@@ -112,3 +112,31 @@ Security:
 
 Docs:
 - OpenAPI/Swagger at /docs
+
+## Reports, Tags, Attachments
+
+Reports (auth required):
+- GET /api/reports — list with filters: floorId, q (search title/body), status, from, to, tag, page, pageSize
+- GET /api/reports/:id — fetch one
+- POST /api/reports — create; body includes title, body, status, observedAt, x, y, lat?, lng?, floorId, tags?
+- PATCH /api/reports/:id — update; same fields optional; tags array replaces associations when provided
+- DELETE /api/reports/:id — delete
+- Ownership: creators can modify/delete their own reports; admins can modify/delete any
+- Audit: create/update/delete entries are recorded in AuditLog with field diffs
+
+Tags (admin only):
+- GET /api/tags — list all
+- POST /api/tags — create { name }
+- PATCH /api/tags/:id — rename { name }
+- DELETE /api/tags/:id — delete
+
+Attachments (auth required; must be report owner or admin):
+- POST /api/reports/:id/attachments/init-upload — returns presigned PUT and s3:// objectKey for client upload
+- POST /api/reports/:id/attachments/complete — persist attachment row after successful upload
+- GET /api/attachments/:id/presigned-get — returns presigned GET URL to download
+- DELETE /api/attachments/:id — delete attachment row
+
+Notes
+- S3 keys are stored as s3://<bucket>/<key>; server presigns GET/PUT on demand via MinIO.
+- Content-type allowlist is enforced for attachments; max size 50MB by default.
+- Swagger docs currently cover auth/users/floors; reports/tags/attachments will be added with detailed schemas in a follow-up.

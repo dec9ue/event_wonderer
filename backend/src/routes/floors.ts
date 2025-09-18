@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify'
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import crypto from 'crypto'
 import { requireAuth } from '../middlewares/auth'
 import { requireAdmin } from '../middlewares/rbac'
@@ -15,22 +15,35 @@ const floorsRoutes: FastifyPluginAsync = async (app) => {
     return listFloorsResponse.parse({ items })
   })
 
-  app.get('/:id', async (req, reply) => {
+  app.get('/:id', async (req: FastifyRequest, reply: FastifyReply) => {
     const id = (req.params as any).id as string
     const floor = await req.server.prisma.floor.findUnique({ where: { id } })
     if (!floor) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Floor not found' } })
     return floorBase.parse(floor)
   })
 
+  // Presigned GET for floor image (public map viewer after auth)
+  app.get('/:id/image/presigned-get', async (req: FastifyRequest, reply: FastifyReply) => {
+    const id = (req.params as any).id as string
+    const floor = await req.server.prisma.floor.findUnique({ where: { id } })
+    if (!floor) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Floor not found' } })
+    if (!floor.imageUrl) return reply.status(400).send({ error: { code: 'NO_IMAGE', message: 'Floor has no image' } })
+    const match = floor.imageUrl.match(/^s3:\/\/(.+?)\/(.+)$/)
+    if (!match) return reply.status(400).send({ error: { code: 'BAD_OBJECT_KEY', message: 'Invalid floor image key' } })
+    const [, bucket, key] = match
+    const { url } = await req.server.presignGetObject({ bucket, key, expiresInSec: 300 })
+    return { url }
+  })
+
   // Admin protected
-  app.post('/', { preHandler: [requireAuth, requireAdmin] }, async (req, reply) => {
+  app.post('/', { preHandler: [requireAuth, requireAdmin] }, async (req: FastifyRequest, reply: FastifyReply) => {
     const parsed = createFloorBody.safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid body', details: parsed.error.flatten() } })
     const floor = await req.server.prisma.floor.create({ data: parsed.data })
     return reply.status(201).send(floorBase.parse(floor))
   })
 
-  app.patch('/:id', { preHandler: [requireAuth, requireAdmin] }, async (req, reply) => {
+  app.patch('/:id', { preHandler: [requireAuth, requireAdmin] }, async (req: FastifyRequest, reply: FastifyReply) => {
     const id = (req.params as any).id as string
     const parsed = patchFloorBody.safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid body', details: parsed.error.flatten() } })
@@ -43,7 +56,7 @@ const floorsRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  app.delete('/:id', { preHandler: [requireAuth, requireAdmin] }, async (req, reply) => {
+  app.delete('/:id', { preHandler: [requireAuth, requireAdmin] }, async (req: FastifyRequest, reply: FastifyReply) => {
     const id = (req.params as any).id as string
     try {
       await req.server.prisma.floor.delete({ where: { id } })
@@ -55,7 +68,7 @@ const floorsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // Presigned upload init
-  app.post('/:id/image/init-upload', { preHandler: [requireAuth, requireAdmin] }, async (req, reply) => {
+  app.post('/:id/image/init-upload', { preHandler: [requireAuth, requireAdmin] }, async (req: FastifyRequest, reply: FastifyReply) => {
     const id = (req.params as any).id as string
     const parsed = initUploadBody.safeParse(req.body)
     if (!parsed.success) {

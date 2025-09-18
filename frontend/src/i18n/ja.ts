@@ -1,0 +1,20 @@
+export default {
+  common: {
+    signin: 'サインイン',
+    email: 'メールアドレス',
+    password: 'パスワード',
+    login: 'ログイン',
+    logout: 'ログアウト',
+    save: '保存',
+    cancel: 'キャンセル',
+    delete: '削除',
+    add: '追加',
+    title: 'タイトル',
+    body: '本文',
+    status: 'ステータス',
+    tags: 'タグ',
+    observedAt: '発見日時',
+    keyword: 'キーワード',
+    dateRange: '期間',
+  },
+}

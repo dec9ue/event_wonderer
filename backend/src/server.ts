@@ -7,6 +7,8 @@ import { authPlugin } from './plugins/auth'
 import { swaggerPlugin } from './plugins/swagger'
 import authRoutes from './routes/auth'
 import userRoutes from './routes/users'
+import floorsRoutes from './routes/floors'
+import { s3Plugin } from './plugins/s3'
 
 export const buildServer = () => {
   const app = Fastify({ logger: true })
@@ -29,6 +31,7 @@ export const buildServer = () => {
   app.register(swaggerPlugin)
   app.register(prismaPlugin)
   app.register(authPlugin)
+  app.register(s3Plugin)
 
   // Routes
   app.get('/healthz', async (req) => {
@@ -37,6 +40,7 @@ export const buildServer = () => {
   })
   app.register(authRoutes, { prefix: '/api/auth' })
   app.register(userRoutes, { prefix: '/api/users' })
+  app.register(floorsRoutes, { prefix: '/api/floors' })
 
   return app
 }

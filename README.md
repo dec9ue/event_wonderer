@@ -71,6 +71,27 @@ Referential actions:
 - JWT and auth routes are not implemented yet; this is infra + data model base.
 - Frontend is a placeholder; future work will add map UI and auth flows.
 
+## Floors & Image Uploads
+
+Image storage uses MinIO (S3-compatible) with presigned PUT uploads from the browser.
+
+Flow:
+1) Admin creates a Floor via POST /api/floors { name }
+2) Admin calls POST /api/floors/:id/image/init-upload with body { contentType: 'image/png'|'image/jpeg' }
+3) Backend returns a presigned URL; the browser PUTs the binary file there directly.
+4) Backend returns objectKey as an s3:// URI (e.g., s3://attachments/floors/<uuid>.img). Store this value into Floor.imageUrl via PATCH /api/floors/:id along with widthPx/heightPx parsed client-side.
+
+Environment (.env) settings impacting MinIO:
+
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minio
+MINIO_SECRET_KEY=minio123
+MINIO_BUCKET=attachments
+MINIO_USE_SSL=false
+
+Frontend can set VITE_API_BASE to point to backend (e.g., http://localhost:3000). The Admin “Floor Manager” page lives at /admin/floors and supports listing, creating floors, and uploading images.
+
 ## Auth & Users
 
 Endpoints:

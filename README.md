@@ -30,19 +30,29 @@ Multi-user MVP for factory site patrol and findings, with Fastify + Prisma + Pos
    Services:
    - Postgres: localhost:5432
    - MinIO API: http://localhost:9000 (console http://localhost:9001)
-   - Backend: http://localhost:3000/healthz
-   - Frontend: http://localhost:5173
+   - Backend: http://localhost:3000 (health: /healthz, docs: /docs)
+   - App (SPA): http://localhost:5173 (login at /login)
 
-4. Migrate and seed database
+4. Initialize database schema and seed
 
    Run these in the backend container:
 
-   docker compose exec backend npx prisma migrate deploy
+   # If this is the first run or there are no migrations yet
+   docker compose exec backend npx prisma db push
+   # Then seed initial data
    docker compose exec backend npx prisma db seed
+
+   If you maintain Prisma migrations in the repo, you can replace the db push with:
+
+   docker compose exec backend npx prisma migrate deploy
 
    Seed creates:
    - Admin: admin@example.com / Admin123!
    - Sample floor and reports
+
+5. Create MinIO bucket (one-time)
+
+   Open the MinIO console at http://localhost:9001 and create a bucket named `attachments` (the default expected by the backend). You can change the bucket via `MINIO_BUCKET` in `.env` and `docker-compose.yml`.
 
 ## Development
 
@@ -70,6 +80,8 @@ Referential actions:
 - MinIO bucket: attachments (create manually in console or via future init script)
 - Auth, users, floors, reports, tags, attachments APIs are implemented with JWT cookie auth. Swagger available at /docs.
 - Frontend includes a login screen, a map viewer with draggable report markers, and admin pages for floors and tags.
+
+Routing (SPA): The frontend is served via Nginx with a fallback to `index.html`, so deep links like `/login`, `/map`, etc. won’t 404.
 
 ### Environment variables
 

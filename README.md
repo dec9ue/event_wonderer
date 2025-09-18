@@ -88,6 +88,7 @@ Routing (SPA): The frontend is served via Nginx with a fallback to `index.html`,
 - docs/ARCHITECTURE.md — High-level architecture
 - docs/SEQUENCES.md — Key flows (login, uploads, audit)
 - docs/DEPLOYMENT.md — Bring-up, configuration, and troubleshooting
+- docs/USER_GUIDE.md — End-user guide (screens and common tasks)
 
 ### Environment variables
 

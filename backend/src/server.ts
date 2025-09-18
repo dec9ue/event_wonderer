@@ -5,6 +5,7 @@ import { config } from './config'
 import { prismaPlugin } from './plugins/prisma'
 import { authPlugin } from './plugins/auth'
 import { swaggerPlugin } from './plugins/swagger'
+import { securityPlugin } from './plugins/security'
 import authRoutes from './routes/auth'
 import userRoutes from './routes/users'
 import floorsRoutes from './routes/floors'
@@ -31,6 +32,7 @@ export const buildServer = () => {
     credentials: true,
   })
   app.register(cookie)
+  app.register(securityPlugin)
   app.register(swaggerPlugin)
   app.register(prismaPlugin)
   app.register(authPlugin)

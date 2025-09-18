@@ -14,7 +14,11 @@ const envSchema = z.object({
   MINIO_ACCESS_KEY: z.string(),
   MINIO_SECRET_KEY: z.string(),
   MINIO_BUCKET: z.string().default('attachments'),
-  MINIO_USE_SSL: z.coerce.boolean().default(false)
+  MINIO_USE_SSL: z.coerce.boolean().default(false),
+  PRESIGNED_TTL_SEC: z.coerce.number().min(10).max(900).default(60),
+  MAX_ATTACHMENT_BYTES: z.coerce.number().min(1024).default(50 * 1024 * 1024),
+  RATE_LIMIT_MAX: z.coerce.number().min(1).default(200),
+  RATE_LIMIT_WINDOW: z.string().default('1 minute')
 })
 
 export const env = envSchema.parse(process.env)

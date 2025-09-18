@@ -2,14 +2,22 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 import { requireAuth } from '../middlewares/auth'
 import { requireAdmin } from '../middlewares/rbac'
 import { createTagBody, patchTagBody, tagBase } from '../schemas/tags'
+import { z } from 'zod'
 
 const tagsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', requireAuth)
   app.addHook('preHandler', requireAdmin)
 
-  app.get('/', async (req: FastifyRequest) => {
-    const items = await req.server.prisma.tag.findMany({ orderBy: { name: 'asc' } })
-    return { items: items.map((t: any) => tagBase.parse(t)) }
+  app.get('/', async (req: FastifyRequest, reply: FastifyReply) => {
+    const querySchema = z.object({ page: z.coerce.number().min(1).default(1), pageSize: z.coerce.number().min(1).max(100).default(50) })
+    const parsed = querySchema.safeParse(req.query)
+    if (!parsed.success) return reply.status(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid query', details: parsed.error.flatten() } })
+    const { page, pageSize } = parsed.data
+    const [items, total] = await Promise.all([
+      req.server.prisma.tag.findMany({ orderBy: { name: 'asc' }, skip: (page - 1) * pageSize, take: pageSize }),
+      req.server.prisma.tag.count(),
+    ])
+    return { items: items.map((t: any) => tagBase.parse(t)), total, page, pageSize }
   })
 
   app.post('/', async (req: FastifyRequest, reply: FastifyReply) => {
